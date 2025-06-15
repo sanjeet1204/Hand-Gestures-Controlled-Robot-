@@ -1,0 +1,40 @@
+code #include <Wire.h>
+#include <MPU6050.h>
+#include <RH_ASK.h>
+#include <SPI.h> // Required for RH_ASK even if not used directly
+
+MPU6050 mpu;
+int16_t ax, ay, az;
+char command;
+
+RH_ASK driver;
+
+void setup() {
+  Wire.begin();
+  Serial.begin(9600);
+
+  if (!driver.init()) {
+    Serial.println("RF driver init failed!");
+  }
+
+  mpu.initialize();
+  if (!mpu.testConnection()) {
+    Serial.println("MPU6050 connection failed");
+  } else {
+    Serial.println("MPU6050 connected");
+  }
+}
+
+void loop() {
+  mpu.getAcceleration(&ax, &ay, &az);
+
+  if (ay > 10000) command = 'F';      // Forward
+  else if (ay < -10000) command = 'B';// Backward
+  else if (ax > 10000) command = 'L'; // Left
+  else if (ax < -10000) command = 'R';// Right
+  else command = 'S';                 // Stop
+
+  driver.send((uint8_t *)&command, 1);
+  driver.waitPacketSent();
+  delay(200);
+}
